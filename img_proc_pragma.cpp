@@ -3,43 +3,47 @@
 #include <cmath>
 #include <ctime>
 #include <omp.h>
-#include <bits/stdc++.h> 
+#include <bits/stdc++.h>
 #include <fstream>
 
-#define THREADS 16
+#define THREADS 4
 #define ALGO 0
-#define TYPE guided
+#define TYPE static
 
 using namespace std;
 
-const int KERNEL_X[3][3] = { { -1, 0, 1 },
-                             { -2, 0, 2 },
-                             { -1, 0, 1 }
-};
+const int KERNEL_X[3][3] = {{-1, 0, 1},
+                            {-2, 0, 2},
+                            {-1, 0, 1}};
 
-const int KERNEL_Y[3][3] = { {  1,  2,  1 },
-                             {  0,  0,  0 },
-                             { -1, -2, -1 }
-};
+const int KERNEL_Y[3][3] = {{1, 2, 1},
+                            {0, 0, 0},
+                            {-1, -2, -1}};
 
-inline int getIndex(int row, int col, int width) {
+inline int getIndex(int row, int col, int width)
+{
     return row * width + col;
 }
 
-int conv2d(int *image, int row, int col, int width, int height, const int kernel[3][3], int kernel_size) {
+int conv2d(int *image, int row, int col, int width, int height, const int kernel[3][3], int kernel_size)
+{
     const int half_kernel_size = kernel_size / 2;
     int result = 0;
 
-    for (int i = -half_kernel_size; i <= half_kernel_size; i++) {
-        for (int j = -half_kernel_size; j <= half_kernel_size; j++) {
+    for (int i = -half_kernel_size; i <= half_kernel_size; i++)
+    {
+        for (int j = -half_kernel_size; j <= half_kernel_size; j++)
+        {
             int c_row = row + i;
             int c_col = col + j;
 
-            if (c_row < 0 || c_row >= height) { 
-                continue; 
+            if (c_row < 0 || c_row >= height)
+            {
+                continue;
             }
-            if (c_col < 0 || c_col >= width) { 
-                continue; 
+            if (c_col < 0 || c_col >= width)
+            {
+                continue;
             }
 
             int kernel_i = i + half_kernel_size;
@@ -51,18 +55,22 @@ int conv2d(int *image, int row, int col, int width, int height, const int kernel
     return result;
 }
 
-void sobel_filters(int* src, int *dest, int width, int height) {
+void sobel_filters(int *src, int *dest, int width, int height)
+{
     int hypot_max = -1;
 
     // #pragma omp parallel for num_threads(THREADS) schedule(TYPE)
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
             int cx = conv2d(src, i, j, width, height, KERNEL_X, 3);
             int cy = conv2d(src, i, j, width, height, KERNEL_Y, 3);
             int hypot = sqrt((cx * cx) + (cy * cy));
 
-            if (hypot > hypot_max) { 
-                hypot_max = hypot; 
+            if (hypot > hypot_max)
+            {
+                hypot_max = hypot;
             }
 
             int index = getIndex(i, j, width);
@@ -71,26 +79,31 @@ void sobel_filters(int* src, int *dest, int width, int height) {
     }
 
     // #pragma omp parallel for num_threads(THREADS) schedule(TYPE)
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
             int index = getIndex(i, j, width);
             dest[index] = (dest[index] * 255) / hypot_max;
         }
     }
 }
 
-
-void threshold(int *src, int *dest, int width, int height, double lowThresholdRatio, double highThresholdRatio) {
+void threshold(int *src, int *dest, int width, int height, double lowThresholdRatio, double highThresholdRatio)
+{
     int p_max = -1;
 
     // #pragma omp parallel for num_threads(THREADS) schedule(TYPE)
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
             int index = getIndex(i, j, width);
             int p = src[index];
 
-            if (p > p_max) { 
-                p_max = p; 
+            if (p > p_max)
+            {
+                p_max = p;
             }
         }
     }
@@ -102,14 +115,19 @@ void threshold(int *src, int *dest, int width, int height, double lowThresholdRa
     const int STRONG = 255;
 
     // #pragma omp parallel for num_threads(THREADS) schedule(TYPE)
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+    for (int i = 0; i < height; i++)
+    {
+        for (int j = 0; j < width; j++)
+        {
             int index = getIndex(i, j, width);
             int p = src[index];
-            if (p >= highThresholdRatio) {
+            if (p >= highThresholdRatio)
+            {
                 int index = getIndex(i, j, width);
                 dest[index] = STRONG;
-            } else if (p <= highThresholdRatio && p >= lowThresholdRatio) {
+            }
+            else if (p <= highThresholdRatio && p >= lowThresholdRatio)
+            {
                 int index = getIndex(i, j, width);
                 dest[index] = WEAK;
             }
@@ -117,12 +135,16 @@ void threshold(int *src, int *dest, int width, int height, double lowThresholdRa
     }
 }
 
-void hysteresis(int *src, int *dest, int width, int height, int weak, int strong) {
+void hysteresis(int *src, int *dest, int width, int height, int weak, int strong)
+{
     // #pragma omp parallel for num_threads(THREADS) schedule(TYPE)
-    for (int i = 1; i < height - 1; i++) {
-        for (int j = 1; j < width - 1; j++) {
+    for (int i = 1; i < height - 1; i++)
+    {
+        for (int j = 1; j < width - 1; j++)
+        {
             int index = getIndex(i, j, width);
-            if (src[index] == weak) {
+            if (src[index] == weak)
+            {
                 int iTL = getIndex(i - 1, j - 1, width);
                 int iTM = getIndex(i - 1, j, width);
                 int iTR = getIndex(i - 1, j + 1, width);
@@ -132,46 +154,50 @@ void hysteresis(int *src, int *dest, int width, int height, int weak, int strong
                 int iBM = getIndex(i + 1, j, width);
                 int iBR = getIndex(i + 1, j + 1, width);
 
-                if (src[iTL] == strong 
-                || src[iTM] == strong
-                || src[iTR] == strong
-                || src[iL] == strong
-                || src[iR] == strong
-                || src[iBL] == strong
-                || src[iBM] == strong
-                || src[iBR] == strong) 
+                if (src[iTL] == strong || src[iTM] == strong || src[iTR] == strong || src[iL] == strong || src[iR] == strong || src[iBL] == strong || src[iBM] == strong || src[iBR] == strong)
                 {
                     dest[index] = strong;
-                } else{
+                }
+                else
+                {
                     dest[index] = 0;
                 }
-            } else {
+            }
+            else
+            {
                 dest[index] = src[index];
             }
         }
     }
 }
 
-int main() {
+int main()
+{
     int width, height;
     scanf("%d %d", &width, &height);
-    int* image = new int[width * height];
+    int *image = new int[width * height];
     int round = width * height;
-    for (int i = 0; i < round; i++) {
+    for (int i = 0; i < round; i++)
+    {
         scanf("%d", &image[i]);
     }
 
-    int* result = new int[width * height];
+    int *result = new int[width * height];
 
     // Start Time
     clock_t start = clock();
 
     // Image Processing Method
-    if (ALGO == 0) {
+    if (ALGO == 0)
+    {
         sobel_filters(image, result, width, height);
-    } else if (ALGO == 1){
+    }
+    else if (ALGO == 1)
+    {
         threshold(image, result, width, height, 0.05, 0.09);
-    } else if (ALGO == 2){
+    }
+    else if (ALGO == 2)
+    {
         hysteresis(image, result, width, height, 30, 255);
     }
 
@@ -179,12 +205,14 @@ int main() {
     clock_t end = clock();
 
     // Calculate Execution Time
-    // printf("%lf\n", (end - start) / (double)CLOCKS_PER_SEC); 
+    // printf("%lf\n", (end - start) / (double)CLOCKS_PER_SEC);
 
     // Print output into text file
     printf("%d %d\n", width, height);
-    for (int i = 0; i < width; i++) {
-        for (int j = 0; j < height; j++) {
+    for (int i = 0; i < width; i++)
+    {
+        for (int j = 0; j < height; j++)
+        {
             int index = getIndex(i, j, width);
             printf("%d\n", result[index]);
         }
