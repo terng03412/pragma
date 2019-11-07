@@ -7,7 +7,7 @@
 #include <fstream>
 
 #define THREADS 4
-#define ALGO 1
+#define ALGO 2
 #define TYPE static
 
 using namespace std;
