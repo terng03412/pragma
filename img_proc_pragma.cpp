@@ -7,7 +7,7 @@
 #include <fstream>
 
 #define THREADS 4
-#define ALGO 2
+#define ALGO 0
 #define TYPE static
 
 using namespace std;
@@ -205,17 +205,17 @@ int main()
     clock_t end = clock();
 
     // Calculate Execution Time
-    // printf("%lf\n", (end - start) / (double)CLOCKS_PER_SEC);
+    printf("%lf\n", (end - start) / (double)CLOCKS_PER_SEC);
 
     // Print output into text file
-    printf("%d %d\n", width, height);
-    for (int i = 0; i < width; i++)
-    {
-        for (int j = 0; j < height; j++)
-        {
-            int index = getIndex(i, j, width);
-            printf("%d\n", result[index]);
-        }
-    }
+    // printf("%d %d\n", width, height);
+    // for (int i = 0; i < width; i++)
+    // {
+    //     for (int j = 0; j < height; j++)
+    //     {
+    //         int index = getIndex(i, j, width);
+    //         printf("%d\n", result[index]);
+    //     }
+    // }
     return 0;
 }
