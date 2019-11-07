@@ -6,7 +6,7 @@
 #include <bits/stdc++.h>
 #include <fstream>
 
-#define THREADS 4
+#define THREADS 8
 #define ALGO 0
 #define TYPE static
 
