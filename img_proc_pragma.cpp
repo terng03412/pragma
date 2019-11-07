@@ -6,8 +6,8 @@
 #include <bits/stdc++.h>
 #include <fstream>
 
-#define THREADS 8
-#define ALGO 0
+#define THREADS 4
+#define ALGO 1
 #define TYPE static
 
 using namespace std;
